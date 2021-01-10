@@ -118,7 +118,7 @@ class Checker : public clang::RecursiveASTVisitor<Checker> {
       Location = MethodDecl.getLocation().getLocWithOffset(Offset);
     } else {
       const clang::ParmVarDecl* Last = *std::prev(MethodDecl.param_end());
-      Location = Last->getLocEnd();
+      Location = Last->getEndLoc();
     }
 
     // Given the current location, and the type of the token *just after* that
@@ -158,16 +158,16 @@ class Consumer : public clang::ASTConsumer {
   ///
   /// Forwards all arguments to the Checker.
   template <typename... Args>
-  explicit Consumer(Args&&... args) : Checker(std::forward<Args>(args)...) {}
+  explicit Consumer(Args&&... args) : checker(std::forward<Args>(args)...) {}
 
   /// Dispatches the `Checker` on a translation unit.
   void HandleTranslationUnit(clang::ASTContext& Context) override {
-    Checker.setContext(Context).TraverseDecl(Context.getTranslationUnitDecl());
+    checker.setContext(Context).TraverseDecl(Context.getTranslationUnitDecl());
   }
 
  private:
   /// The `Checker` to verify `override` usage.
-  Checker Checker;
+  Checker checker;
 };
 
 /// Creates the `ASTConsumer` and instantiates the `Rewriter`.
@@ -185,9 +185,8 @@ class Action : public clang::ASTFrontendAction {
     return std::make_unique<Consumer>(RewriteOption, Rewriter);
   }
 
-  bool BeginSourceFileAction(clang::CompilerInstance& Compiler,
-                             llvm::StringRef Filename) override {
-    llvm::errs() << "Processing " << Filename << "\n\n";
+  bool BeginSourceFileAction(clang::CompilerInstance& Compiler) override {
+    //    llvm::errs() << "Processing " << Filename << "\n\n";
     return true;
   }
 
@@ -240,8 +239,9 @@ llvm::cl::extrahelp
 }  // namespace
 
 struct ToolFactory : public clang::tooling::FrontendActionFactory {
-  clang::FrontendAction* create() override {
-    return new UseOverride::Action(RewriteOption);
+  std::unique_ptr<clang::FrontendAction> create() override {
+    return std::unique_ptr<clang::FrontendAction>(
+        new UseOverride::Action(RewriteOption));
   }
 };
 

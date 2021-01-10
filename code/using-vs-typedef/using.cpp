@@ -36,7 +36,7 @@ class MatchHandler : public clang::ast_matchers::MatchFinder::MatchCallback {
 
     // Note: getLocation() points to the start of the typedef'd name,
     // e.g. `MyInt` in `typedef int MyInt`. So use `getLocStart()` instead.
-    Diagnostics.Report(Typedef->getLocStart(), ID).AddFixItHint(FixIt);
+    Diagnostics.Report(Typedef->getBeginLoc(), ID).AddFixItHint(FixIt);
   }
 };
 
